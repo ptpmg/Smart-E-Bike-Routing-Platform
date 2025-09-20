@@ -1,0 +1,22 @@
+CREATE DATABASE smart_ebike;
+
+\connect smart_ebike;
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'app_user') THEN
+    CREATE ROLE app_user LOGIN PASSWORD 'app_password';
+  END IF;
+END$$;
+
+GRANT CONNECT ON DATABASE smart_ebike TO app_user;
+
+CREATE SCHEMA IF NOT EXISTS app AUTHORIZATION app_user;
+ALTER DATABASE smart_ebike SET search_path TO app, public;
+
+GRANT USAGE ON SCHEMA app TO app_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA app GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA app GRANT USAGE, SELECT ON SEQUENCES TO app_user;
