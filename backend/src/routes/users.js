@@ -8,8 +8,8 @@ const router = Router();
 const PUBLIC_COLS = "id, email, role, is_active, created_at, updated_at";
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// GET /api/users -> lista (ADMIN ONLY)
-router.get("/", async (_req, res, next) => {
+// GET /api/users -> ADMIN ONLY
+router.get("/", authRequired, adminOnly, async (_req, res, next) => {
   try {
     const { rows } = await pool.query(
       `SELECT ${PUBLIC_COLS} FROM app.users ORDER BY created_at DESC`
@@ -18,7 +18,7 @@ router.get("/", async (_req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// GET /api/users/:id -> detalhe (SELF OR ADMIN)
+// GET /api/users/:id -> SELF OR ADMIN
 router.get("/:id", authRequired, selfOrAdmin, async (req, res, next) => {
   try {
     const { rows } = await pool.query(
@@ -30,13 +30,9 @@ router.get("/:id", authRequired, selfOrAdmin, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// (REMOVIDO) POST /api/users -> registo agora é /auth/register
-// Se quiseres manter para admins, descomenta e usa: authRequired, adminOnly
-// router.post("/", authRequired, adminOnly, async (req, res, next) => { ... });
+// (POST removido — registo é pelo /auth/register)
 
-// PATCH /api/users/:id -> atualizar (SELF OR ADMIN)
-// - user normal: pode mudar email/password
-// - admin: pode também mudar is_active
+// PATCH /api/users/:id -> SELF pode mudar email/password; ADMIN pode também is_active
 router.patch("/:id", authRequired, selfOrAdmin, async (req, res, next) => {
   try {
     const { email, password, is_active } = req.body || {};
@@ -54,7 +50,6 @@ router.patch("/:id", authRequired, selfOrAdmin, async (req, res, next) => {
       sets.push(`password_hash = $${i++}`); vals.push(hash);
     }
     if (is_active !== undefined) {
-      // só admin pode alterar is_active
       if (req.user.role !== "admin") {
         return res.status(403).json({ error: "Apenas admin pode alterar is_active" });
       }
