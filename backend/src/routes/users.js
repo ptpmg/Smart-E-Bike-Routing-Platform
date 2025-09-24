@@ -9,7 +9,7 @@ const PUBLIC_COLS = "id, email, role, is_active, created_at, updated_at";
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // GET /api/users -> lista (ADMIN ONLY)
-router.get("/", authRequired, adminOnly, async (_req, res, next) => {
+router.get("/", async (_req, res, next) => {
   try {
     const { rows } = await pool.query(
       `SELECT ${PUBLIC_COLS} FROM app.users ORDER BY created_at DESC`

@@ -1,258 +1,461 @@
 {
-    "openapi": "3.0.3",
-    "info": {
-      "title": "Smart E-Bike Routing Platform – API",
-      "version": "0.1.0",
-      "description": "API base (sem autenticação ainda) para gestão de utilizadores."
-    },
-    "servers": [
-      { "url": "http://localhost:4000", "description": "Local dev" }
-    ],
-    "paths": {
-        "/auth/create-admin": {
-            "post": {
-                "summary": "Criar utilizador admin",
-                "description": "Se não existir admin: requer `setup_token` igual a ADMIN_SETUP_TOKEN. Se já existir admin: requer Bearer JWT de um admin.",
-                "requestBody": {
-                "required": true,
-                "content": {
-                    "application/json": {
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                        "email": { "type": "string", "format": "email" },
-                        "password": { "type": "string", "minLength": 6 },
-                        "setup_token": { "type": "string", "description": "Apenas necessário para criar o primeiro admin" }
-                        },
-                        "required": ["email","password"]
-                    }
-                    }
-                }
-                },
-                "responses": {
-                "201": {
-                    "description": "Admin criado",
-                    "content": {
-                    "application/json": {
-                        "schema": {
-                        "type": "object",
-                        "properties": {
-                            "user": { "$ref": "#/components/schemas/User" },
-                            "token": { "type": "string" }
-                        }
-                        }
-                    }
-                    }
-                },
-                "401": { "description": "Token inválido/em falta", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }}} },
-                "403": { "description": "Acesso negado / setup token inválido", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }}} },
-                "409": { "description": "Email já existe", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }}} }
-                }
-            }
-            },
-
-      "/healthz": {
-        "get": {
-          "summary": "Health check da API + ligação à BD",
-          "responses": {
-            "200": {
-              "description": "OK",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "properties": {
-                      "ok": { "type": "boolean" },
-                      "db_time": { "type": "string", "format": "date-time" }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "/api/users": {
-        "get": {
-          "summary": "Listar utilizadores",
-          "responses": {
-            "200": {
-              "description": "Lista de utilizadores",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "array",
-                    "items": { "$ref": "#/components/schemas/User" }
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "/api/users/{id}": {
-        "get": {
-          "summary": "Obter utilizador por ID",
-          "security": [{ "bearerAuth": [] }],
-          "parameters": [
-            { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
-          ],
-          "responses": {
-            "200": { "description": "OK", "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/User" } }
-            }},
-            "404": { "description": "Não encontrado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }}}}
-          }
-        },
-        "patch": {
-          "summary": "Atualizar utilizador",
-          "security": [{ "bearerAuth": [] }],
-          "parameters": [
-            { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
-          ],
-          "requestBody": {
-            "required": true,
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Smart E-Bike Routing Platform – API",
+    "version": "0.2.0",
+    "description": "API base com autenticação JWT, gestão de utilizadores e CRUD de rotas (inclui pontos)."
+  },
+  "servers": [
+    { "url": "http://localhost:4000", "description": "Local dev" }
+  ],
+  "paths": {
+    "/healthz": {
+      "get": {
+        "summary": "Health check da API + ligação à BD",
+        "responses": {
+          "200": {
+            "description": "OK",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/UserUpdate" } }
-            }
-          },
-          "responses": {
-            "200": { "description": "Atualizado", "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/User" } }
-            }},
-            "400": { "description": "Pedido inválido", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }}}},
-            "404": { "description": "Não encontrado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }}}}
-          }
-        },
-        "delete": {
-          "summary": "Eliminar utilizador",
-          "security": [{ "bearerAuth": [] }],
-          "parameters": [
-            { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
-          ],
-          "responses": {
-            "204": { "description": "Apagado" },
-            "404": { "description": "Não encontrado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }}}}
-          }
-        }
-      },
-      "/auth/register": {
-        "post": {
-            "summary": "Registo (cria utilizador role=user)",
-            "requestBody": {
-            "required": true,
-            "content": {
-                "application/json": { "schema": { "$ref": "#/components/schemas/UserCreate" } }
-            }
-            },
-            "responses": {
-            "201": {
-                "description": "Criado",
-                "content": {
-                "application/json": {
-                    "schema": {
-                    "type": "object",
-                    "properties": {
-                        "user": { "$ref": "#/components/schemas/User" },
-                        "token": { "type": "string" }
-                    }
-                    }
-                }
-                }
-            },
-            "409": { "description": "Email já existe", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
-            }
-        }
-        },
-        "/auth/login": {
-        "post": {
-            "summary": "Login (devolve JWT)",
-            "requestBody": {
-            "required": true,
-            "content": {
-                "application/json": {
+              "application/json": {
                 "schema": {
-                    "type": "object",
-                    "properties": {
-                    "email": { "type": "string", "format": "email" },
-                    "password": { "type": "string" }
-                    },
-                    "required": ["email","password"]
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean" },
+                    "db_time": { "type": "string", "format": "date-time" }
+                  }
                 }
-                }
+              }
             }
-            },
-            "responses": {
-            "200": {
-                "description": "OK",
-                "content": {
-                "application/json": {
-                    "schema": {
-                    "type": "object",
-                    "properties": {
-                        "user": { "$ref": "#/components/schemas/User" },
-                        "token": { "type": "string" }
-                    }
-                    }
-                }
-                }
-            },
-            "401": { "description": "Credenciais inválidas", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
-            }
+          }
         }
-        }
-
-
-
-
-
+      }
     },
-    "components": {
-      "schemas": {
-        "User": {
-          "type": "object",
-          "properties": {
-            "id":        { "type": "string", "format": "uuid" },
-            "email":     { "type": "string", "format": "email" },
-            "role":      { "type": "string", "enum": ["user","admin"] },
-            "is_active": { "type": "boolean" },
-            "created_at":{ "type": "string", "format": "date-time" },
-            "updated_at":{ "type": "string", "format": "date-time" }
-          },
-          "required": ["id","email","role","is_active","created_at","updated_at"]
-        },
-        "UserCreate": {
-          "type": "object",
-          "properties": {
-            "email":    { "type": "string", "format": "email" },
-            "password": { "type": "string", "minLength": 6 }
-          },
-          "required": ["email","password"]
-        },
-        "UserUpdate": {
-          "type": "object",
-          "properties": {
-            "email":     { "type": "string", "format": "email" },
-            "password":  { "type": "string", "minLength": 6 },
-            "role":      { "type": "string", "enum": ["user","admin"] },
-            "is_active": { "type": "boolean" }
-          }
-        },
-        "Error": {
-          "type": "object",
-          "properties": {
-            "error": { "type": "string" }
-          }
-        }
 
+    "/auth/register": {
+      "post": {
+        "summary": "Registo (cria utilizador com role=user)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/UserCreate" } }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Criado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": { "$ref": "#/components/schemas/User" },
+                    "token": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "409": { "description": "Email já existe", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }}}}
+        }
+      }
+    },
+
+    "/auth/login": {
+      "post": {
+        "summary": "Login (devolve JWT)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string" }
+                },
+                "required": ["email","password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": { "$ref": "#/components/schemas/User" },
+                    "token": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Credenciais inválidas", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }}}}
+        }
+      }
+    },
+
+    "/auth/create-admin": {
+      "post": {
+        "summary": "Criar utilizador admin",
+        "description": "Se não existir admin: requer `setup_token` igual a ADMIN_SETUP_TOKEN. Se já existir admin: requer Bearer JWT de um admin.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string", "minLength": 6 },
+                  "setup_token": { "type": "string", "description": "Só necessário para o primeiro admin" }
+                },
+                "required": ["email","password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Admin criado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": { "$ref": "#/components/schemas/User" },
+                    "token": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Token em falta/ inválido", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }}}},
+          "403": { "description": "Acesso negado / setup token inválido", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }}}},
+          "409": { "description": "Email já existe", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }}}}
+        }
+      }
+    },
+
+    "/api/users": {
+      "get": {
+        "summary": "Listar utilizadores (admin)",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/User" } }
+              }
+            }
+          },
+          "401": { "description": "Token em falta/ inválido" },
+          "403": { "description": "Apenas admins" }
+        }
+      }
+    },
+
+    "/api/users/{id}": {
+      "get": {
+        "summary": "Obter utilizador (self ou admin)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" }}}},
+          "401": { "description": "Token em falta/ inválido" },
+          "403": { "description": "Acesso negado" },
+          "404": { "description": "Não encontrado" }
+        }
       },
-      "securitySchemes": {
-        "bearerAuth": {
-            "type": "http",
-            "scheme": "bearer",
-            "bearerFormat": "JWT"
+      "patch": {
+        "summary": "Atualizar utilizador (self: email/password; admin: + is_active)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserUpdate" } } }
+        },
+        "responses": {
+          "200": { "description": "Atualizado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" }}}},
+          "400": { "description": "Pedido inválido" },
+          "401": { "description": "Token em falta/ inválido" },
+          "403": { "description": "Apenas admin pode alterar is_active" },
+          "404": { "description": "Não encontrado" }
         }
+      },
+      "delete": {
+        "summary": "Eliminar utilizador (admin)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "204": { "description": "Apagado" },
+          "401": { "description": "Token em falta/ inválido" },
+          "403": { "description": "Apenas admins" },
+          "404": { "description": "Não encontrado" }
         }
+      }
+    },
+
+    "/api/routes": {
+      "get": {
+        "summary": "Listar rotas (públicas/unlisted; mine=1 inclui privadas do próprio)",
+        "parameters": [
+          { "name": "visibility", "in": "query", "schema": { "type": "string", "enum": ["private","unlisted","public"] } },
+          { "name": "mine", "in": "query", "schema": { "type": "boolean" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "minimum": 1, "maximum": 100 } },
+          { "name": "offset", "in": "query", "schema": { "type": "integer", "default": 0, "minimum": 0 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": { "type": "array", "items": { "$ref": "#/components/schemas/Route" } },
+                    "limit": { "type": "integer" },
+                    "offset": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Token em falta/ inválido (apenas quando mine=1)" }
+        }
+      },
+      "post": {
+        "summary": "Criar rota",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RouteCreate" } } }
+        },
+        "responses": {
+          "201": { "description": "Criada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Route" }}}},
+          "400": { "description": "Pedido inválido" },
+          "401": { "description": "Token em falta/ inválido" }
+        }
+      }
+    },
+
+    "/api/routes/{id}": {
+      "get": {
+        "summary": "Obter rota",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Route" }}}},
+          "401": { "description": "Token em falta/ inválido (se rota for private)" },
+          "403": { "description": "Acesso negado (se rota for private)" },
+          "404": { "description": "Não encontrada" }
+        }
+      },
+      "patch": {
+        "summary": "Atualizar rota (owner ou admin)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RouteUpdate" } } }
+        },
+        "responses": {
+          "200": { "description": "Atualizada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Route" }}}},
+          "400": { "description": "Pedido inválido" },
+          "401": { "description": "Token em falta/ inválido" },
+          "403": { "description": "Apenas owner/admin" },
+          "404": { "description": "Não encontrada" }
+        }
+      },
+      "delete": {
+        "summary": "Eliminar rota (owner ou admin)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "204": { "description": "Apagada" },
+          "401": { "description": "Token em falta/ inválido" },
+          "403": { "description": "Apenas owner/admin" },
+          "404": { "description": "Não encontrada" }
+        }
+      }
+    },
+
+    "/api/routes/{id}/points": {
+      "get": {
+        "summary": "Listar pontos de uma rota",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/RoutePoint" } }
+              }
+            }
+          },
+          "401": { "description": "Token em falta/ inválido (se rota for private)" },
+          "403": { "description": "Acesso negado (se rota for private)" },
+          "404": { "description": "Não encontrada" }
+        }
+      },
+      "put": {
+        "summary": "Substituir todos os pontos da rota (owner ou admin)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RoutePointsReplace" } } }
+        },
+        "responses": {
+          "204": { "description": "Atualizado" },
+          "400": { "description": "Pedido inválido" },
+          "401": { "description": "Token em falta/ inválido" },
+          "403": { "description": "Apenas owner/admin" },
+          "404": { "description": "Não encontrada" }
+        }
+      }
+    }
+  },
+
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id":        { "type": "string", "format": "uuid" },
+          "email":     { "type": "string", "format": "email" },
+          "role":      { "type": "string", "enum": ["user","admin"] },
+          "is_active": { "type": "boolean" },
+          "created_at":{ "type": "string", "format": "date-time" },
+          "updated_at":{ "type": "string", "format": "date-time" }
+        },
+        "required": ["id","email","role","is_active","created_at","updated_at"]
+      },
+      "UserCreate": {
+        "type": "object",
+        "properties": {
+          "email":    { "type": "string", "format": "email" },
+          "password": { "type": "string", "minLength": 6 }
+        },
+        "required": ["email","password"]
+      },
+      "UserUpdate": {
+        "type": "object",
+        "properties": {
+          "email":     { "type": "string", "format": "email" },
+          "password":  { "type": "string", "minLength": 6 },
+          "is_active": { "type": "boolean", "description": "Apenas admin pode alterar" }
+        }
+      },
+
+      "Route": {
+        "type": "object",
+        "properties": {
+          "id":               { "type": "string", "format": "uuid" },
+          "owner_id":         { "type": "string", "format": "uuid" },
+          "name":             { "type": "string" },
+          "description":      { "type": "string", "nullable": true },
+          "distance_m":       { "type": "integer", "nullable": true },
+          "elevation_gain_m": { "type": "integer", "nullable": true },
+          "difficulty":       { "type": "string", "enum": ["easy","moderate","hard"] },
+          "visibility":       { "type": "string", "enum": ["private","unlisted","public"] },
+          "is_loop":          { "type": "boolean" },
+          "created_at":       { "type": "string", "format": "date-time" },
+          "updated_at":       { "type": "string", "format": "date-time" }
+        },
+        "required": ["id","owner_id","name","difficulty","visibility","is_loop","created_at","updated_at"]
+      },
+
+      "RouteCreate": {
+        "type": "object",
+        "properties": {
+          "name":             { "type": "string" },
+          "description":      { "type": "string" },
+          "distance_m":       { "type": "integer" },
+          "elevation_gain_m": { "type": "integer" },
+          "difficulty":       { "type": "string", "enum": ["easy","moderate","hard"], "default": "moderate" },
+          "visibility":       { "type": "string", "enum": ["private","unlisted","public"], "default": "private" },
+          "is_loop":          { "type": "boolean", "default": false },
+          "points": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/RoutePointInput" }
+          }
+        },
+        "required": ["name"]
+      },
+
+      "RouteUpdate": {
+        "type": "object",
+        "properties": {
+          "name":             { "type": "string" },
+          "description":      { "type": "string" },
+          "distance_m":       { "type": "integer" },
+          "elevation_gain_m": { "type": "integer" },
+          "difficulty":       { "type": "string", "enum": ["easy","moderate","hard"] },
+          "visibility":       { "type": "string", "enum": ["private","unlisted","public"] },
+          "is_loop":          { "type": "boolean" }
+        }
+      },
+
+      "RoutePoint": {
+        "type": "object",
+        "properties": {
+          "id":          { "type": "integer" },
+          "seq":         { "type": "integer" },
+          "lat":         { "type": "number", "format": "double" },
+          "lon":         { "type": "number", "format": "double" },
+          "elevation_m": { "type": "number", "format": "double", "nullable": true }
+        },
+        "required": ["id","seq","lat","lon"]
+      },
+
+      "RoutePointInput": {
+        "type": "object",
+        "properties": {
+          "lat":         { "type": "number", "format": "double" },
+          "lon":         { "type": "number", "format": "double" },
+          "elevation_m": { "type": "number", "format": "double", "nullable": true }
+        },
+        "required": ["lat","lon"]
+      },
+
+      "RoutePointsReplace": {
+        "type": "object",
+        "properties": {
+          "points": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/RoutePointInput" }
+          }
+        },
+        "required": ["points"]
+      },
+
+      "Error": {
+        "type": "object",
+        "properties": { "error": { "type": "string" } }
+      }
     }
   }
-  
+}
