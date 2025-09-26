@@ -19,6 +19,13 @@ export class AuthService {
     try { const payload: any = jwtDecode(t); return payload.role || null; } catch { return null; }
   }
 
+  getUserId(): string | null {
+    const t = this.getToken();
+    if (!t) return null;
+    try { const p: any = jwtDecode(t); return p.sub || null; } catch { return null; }
+  }
+
+
   login(dto: LoginDTO) {
     return this.http.post<AuthResponse>(`${environment.apiBase}/auth/login`, dto);
   }
