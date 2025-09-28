@@ -35,6 +35,7 @@ import { CommonModule } from '@angular/common';
       <mat-nav-list>
         <a mat-list-item routerLink="/">Dashboard</a>
         <a mat-list-item routerLink="/routes">Rotas</a>
+        <a mat-list-item routerLink="/routes/new">Nova rota</a>
         <a mat-list-item routerLink="/stats">Estatísticas</a>
         <ng-container *ngIf="auth.getRole()==='admin'">
           <h3 matSubheader>Admin</h3>

@@ -5,15 +5,6 @@
   "projects": {
     "webapp": {
       "projectType": "application",
-      "schematics": {
-        "@schematics/angular:component": {
-          "styles": [
-            "src/styles.scss",
-            "node_modules/leaflet/dist/leaflet.css",
-            "node_modules/leaflet-draw/dist/leaflet.draw.css"
-          ]
-        }
-      },
       "root": "",
       "sourceRoot": "src",
       "prefix": "app",
@@ -34,7 +25,9 @@
               }
             ],
             "styles": [
-              "src/styles.scss"
+              "src/styles.scss",
+              "node_modules/leaflet/dist/leaflet.css",
+              "node_modules/leaflet-draw/dist/leaflet.draw.css"
             ]
           },
           "configurations": {
@@ -52,7 +45,8 @@
                 }
               ],
               "outputHashing": "all",
-              "serviceWorker": "ngsw-config.json"
+              "serviceWorker": true,
+              "ngswConfigPath": "ngsw-config.json"
             },
             "development": {
               "optimization": false,
@@ -93,7 +87,9 @@
               }
             ],
             "styles": [
-              "src/styles.scss"
+              "src/styles.scss",
+              "node_modules/leaflet/dist/leaflet.css",
+              "node_modules/leaflet-draw/dist/leaflet.draw.css"
             ]
           }
         }
