@@ -1,13 +1,14 @@
 name: CI Backend
 on:
   push:
-    paths: ["backend/**", ".github/workflows/ci-backend.yml"]
+    paths: ["backend/**", "infra/sql/**", ".github/workflows/ci-backend.yml"]
   pull_request:
-    paths: ["backend/**"]
+    paths: ["backend/**", "infra/sql/**"]
 
 jobs:
   test:
     runs-on: ubuntu-latest
+
     services:
       postgres:
         image: postgres:16
@@ -18,7 +19,7 @@ jobs:
         ports: ["5432:5432"]
         options: >-
           --health-cmd="pg_isready -U app_user -d smart_ebike_test"
-          --health-interval=5s --health-timeout=5s --health-retries=10
+          --health-interval=5s --health-timeout=5s --health-retries=20
 
     defaults:
       run:
@@ -36,15 +37,22 @@ jobs:
       - name: Install deps
         run: npm ci
 
+      - name: Install psql client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
       - name: Wait for Postgres
         run: |
-          until pg_isready -h localhost -p 5432 -U app_user -d smart_ebike_test; do sleep 1; done
+          until pg_isready -h localhost -p 5432 -U app_user -d smart_ebike_test; do
+            echo "waiting for postgres..."; sleep 1;
+          done
 
-      - name: Prepare DB schema
+      - name: Apply schema
         env:
-          DATABASE_URL: postgres://app_user:app_password@localhost:5432/smart_ebike_test
+          PGPASSWORD: app_password
         run: |
-          node scripts/migrate.js  # ou psql -f ./sql/schema.sql
+          psql -h localhost -p 5432 -U app_user -d smart_ebike_test -v ON_ERROR_STOP=1 -f ../infra/sql/schema.sql
 
       - name: Run tests
         env:

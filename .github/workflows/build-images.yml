@@ -13,6 +13,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+
     steps:
       - uses: actions/checkout@v4
 
@@ -23,18 +24,22 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & push backend
+      - name: Build & push backend image
         uses: docker/build-push-action@v6
         with:
           context: ./backend
           file: ./backend/Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository }}/api:latest
+          tags: |
+            ghcr.io/${{ lowercase(github.repository_owner) }}/smart-ebike-api:latest
+            ghcr.io/${{ lowercase(github.repository_owner) }}/smart-ebike-api:${{ github.sha }}
 
-      - name: Build & push frontend
+      - name: Build & push frontend image
         uses: docker/build-push-action@v6
         with:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository }}/web:latest
+          tags: |
+            ghcr.io/${{ lowercase(github.repository_owner) }}/smart-ebike-web:latest
+            ghcr.io/${{ lowercase(github.repository_owner) }}/smart-ebike-web:${{ github.sha }}
