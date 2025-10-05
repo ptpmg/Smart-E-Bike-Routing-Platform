@@ -1,0 +1,55 @@
+name: CI Backend
+on:
+  push:
+    paths: ["backend/**", ".github/workflows/ci-backend.yml"]
+  pull_request:
+    paths: ["backend/**"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: smart_ebike_test
+          POSTGRES_USER: app_user
+          POSTGRES_PASSWORD: app_password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd="pg_isready -U app_user -d smart_ebike_test"
+          --health-interval=5s --health-timeout=5s --health-retries=10
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Wait for Postgres
+        run: |
+          until pg_isready -h localhost -p 5432 -U app_user -d smart_ebike_test; do sleep 1; done
+
+      - name: Prepare DB schema
+        env:
+          DATABASE_URL: postgres://app_user:app_password@localhost:5432/smart_ebike_test
+        run: |
+          node scripts/migrate.js  # ou psql -f ./sql/schema.sql
+
+      - name: Run tests
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgres://app_user:app_password@localhost:5432/smart_ebike_test
+          JWT_SECRET: test_secret
+          ADMIN_SETUP_TOKEN: setup123
+        run: npm test
