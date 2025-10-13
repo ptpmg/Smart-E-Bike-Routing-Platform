@@ -41,3 +41,45 @@ CREATE TABLE IF NOT EXISTS route_points (
   ts timestamptz,
   UNIQUE(route_id, seq)
 );
+
+
+CREATE TABLE IF NOT EXISTS attachments (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  route_id   uuid NOT NULL REFERENCES routes(id) ON DELETE CASCADE,
+  filename   text NOT NULL,
+  url        text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- likes: “gosto” em rotas
+CREATE TABLE IF NOT EXISTS likes (
+  user_id    uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  route_id   uuid NOT NULL REFERENCES routes(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, route_id)
+);
+
+-- favorites: rotas favoritas
+CREATE TABLE IF NOT EXISTS favorites (
+  user_id    uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  route_id   uuid NOT NULL REFERENCES routes(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, route_id)
+);
+
+-- rides: atividades realizadas (mínimo)
+CREATE TABLE IF NOT EXISTS rides (
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id      uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  route_id     uuid NOT NULL REFERENCES routes(id) ON DELETE CASCADE,
+  started_at   timestamptz NOT NULL DEFAULT now(),
+  duration_sec integer,
+  distance_m   integer
+);
+
+-- índices úteis
+CREATE INDEX IF NOT EXISTS idx_attachments_route ON attachments(route_id);
+CREATE INDEX IF NOT EXISTS idx_likes_route ON likes(route_id);
+CREATE INDEX IF NOT EXISTS idx_favorites_route ON favorites(route_id);
+CREATE INDEX IF NOT EXISTS idx_rides_user ON rides(user_id);
+CREATE INDEX IF NOT EXISTS idx_rides_route ON rides(route_id);
