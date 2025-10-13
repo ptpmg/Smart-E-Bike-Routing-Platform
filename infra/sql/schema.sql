@@ -77,7 +77,38 @@ CREATE TABLE IF NOT EXISTS rides (
   distance_m   integer
 );
 
--- índices úteis
+
+CREATE TABLE IF NOT EXISTS profiles (
+  user_id     uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  display_name text,
+  avatar_url   text,
+  bio          text,
+  updated_at   timestamptz NOT NULL DEFAULT now()
+);
+
+-- api_keys: chaves de API associadas a um user (mínimo)
+CREATE TABLE IF NOT EXISTS api_keys (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  key_hash   text NOT NULL,                -- guarda hash da chave, não a chave em claro
+  label      text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  last_used  timestamptz
+);
+CREATE INDEX IF NOT EXISTS idx_api_keys_user ON api_keys(user_id);
+
+-- audit_logs: registo simples de auditoria
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id          bigserial PRIMARY KEY,
+  actor_id    uuid REFERENCES users(id) ON DELETE SET NULL,
+  action      text NOT NULL,              -- ex: 'LOGIN', 'CREATE_ROUTE'
+  entity_type text,                       -- ex: 'route','user'
+  entity_id   uuid,
+  details     jsonb,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_actor ON audit_logs(actor_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_attachments_route ON attachments(route_id);
 CREATE INDEX IF NOT EXISTS idx_likes_route ON likes(route_id);
 CREATE INDEX IF NOT EXISTS idx_favorites_route ON favorites(route_id);
